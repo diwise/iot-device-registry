@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/logging"
-	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
-	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld/types"
+	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/logging"
+	"github.com/diwise/ngsi-ld-golang/pkg/datamodels/fiware"
+	"github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld/types"
 )
 
 func TestMain(m *testing.M) {

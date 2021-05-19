@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/application"
-	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/logging"
-	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/repositories/database"
-	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging"
+	"github.com/diwise/iot-device-registry/internal/pkg/application"
+	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/logging"
+	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/repositories/database"
+	"github.com/diwise/messaging-golang/pkg/messaging"
 )
 
 func main() {

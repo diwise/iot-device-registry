@@ -11,12 +11,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/logging"
-	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/repositories/models"
-	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging"
-	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
-	ngsi "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld"
-	ngsitypes "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld/types"
+	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/logging"
+	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/repositories/models"
+	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/ngsi-ld-golang/pkg/datamodels/fiware"
+	ngsi "github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld"
+	ngsitypes "github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld/types"
 )
 
 func TestMain(m *testing.M) {
