@@ -18,18 +18,18 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 
-	temperaturecmds "github.com/iot-for-tillgenglighet/api-temperature/pkg/infrastructure/messaging/commands"
-	gql "github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/_presentation/api/graphql"
-	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/logging"
-	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/repositories/database"
-	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging"
-	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging/telemetry"
+	temperaturecmds "github.com/diwise/api-temperature/pkg/infrastructure/messaging/commands"
+	gql "github.com/diwise/iot-device-registry/internal/pkg/_presentation/api/graphql"
+	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/logging"
+	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/repositories/database"
+	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/messaging-golang/pkg/messaging/telemetry"
 
 	"github.com/rs/cors"
 
-	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
-	ngsi "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld"
-	ngsitypes "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld/types"
+	"github.com/diwise/ngsi-ld-golang/pkg/datamodels/fiware"
+	ngsi "github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld"
+	ngsitypes "github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld/types"
 )
 
 //RequestRouter needs a comment

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/logging"
-	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/repositories/models"
-	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
+	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/logging"
+	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/repositories/models"
+	"github.com/diwise/ngsi-ld-golang/pkg/datamodels/fiware"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
