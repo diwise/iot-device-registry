@@ -19,8 +19,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgryski/trifles v0.0.0-20190318185328-a8d75aae118c h1:TUuUh0Xgj97tLMNtWtNvI9mIV6isjEb9lBMNv+77IGM=
 github.com/dgryski/trifles v0.0.0-20190318185328-a8d75aae118c/go.mod h1:if7Fbed8SFyPtHLHbg49SI7NAdJiC5WIA09pe59rfAA=
-github.com/diwise/api-temperature v0.0.0-20210519141916-8f3b3ba01d2e h1:HGNTggUTHYEWvJeYiJMxN83uDgkQ6YZzivgvnPVkx9I=
-github.com/diwise/api-temperature v0.0.0-20210519141916-8f3b3ba01d2e/go.mod h1:CfCDLbpRrQZX+etXtumYARKXuDLg++NBv/bI62600/I=
+github.com/diwise/api-temperature v0.0.0-20210519153202-9fa4ca24d641 h1:DBbJYwLJZv7sn6iAaiDJUUBm79BgHaC1vWy+imjdUT8=
+github.com/diwise/api-temperature v0.0.0-20210519153202-9fa4ca24d641/go.mod h1:CfCDLbpRrQZX+etXtumYARKXuDLg++NBv/bI62600/I=
 github.com/diwise/messaging-golang v0.0.0-20210519125901-747dbe4d4b42 h1:1pTPqRYlH1Q18wMLFuek3PfxaNNHTxbNtkfFHMeWZwI=
 github.com/diwise/messaging-golang v0.0.0-20210519125901-747dbe4d4b42/go.mod h1:tXC8qL64QBI34uRpdbX+LUwoGjgIp1bqpecfBvIYkTw=
 github.com/diwise/ngsi-ld-golang v0.0.0-20210519125641-0cb62633de46 h1:AgXJHQe+IgPaZ4u5YFtXohcv65JfXfYHnq1mFAoRq30=

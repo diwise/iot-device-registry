@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/99designs/gqlgen v0.13.0
-	github.com/diwise/api-temperature v0.0.0-20210519141916-8f3b3ba01d2e
+	github.com/diwise/api-temperature v0.0.0-20210519153202-9fa4ca24d641
 	github.com/diwise/messaging-golang v0.0.0-20210519125901-747dbe4d4b42
 	github.com/diwise/ngsi-ld-golang v0.0.0-20210519125641-0cb62633de46
 	github.com/go-chi/chi v4.1.2+incompatible
