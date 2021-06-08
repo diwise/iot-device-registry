@@ -46,7 +46,18 @@ services:
       - '15672'
     volumes:
       - 'rabbitmq_data:/bitnami'
+
+  grafana:
+    image: 'grafana/grafana:8.0.0'
+    ports: 
+      - '3000:3000'
+    depends_on:
+      - postgresdb
+    volumes: 
+      - 'grafana-storage:/var/lib/grafana'
   
 volumes:
   rabbitmq_data:
+    driver: local
+  grafana-storage:
     driver: local

@@ -140,6 +140,7 @@ func NewDatabaseConnection(connect ConnectorFunc, log logging.Logger) (Datastore
 		"fillingLevel": "l",
 		"snowDepth":    "snow",
 		"temperature":  "t",
+		"co2":          "co2",
 	}
 
 	for property, abbreviation := range props {
