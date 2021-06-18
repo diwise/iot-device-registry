@@ -6,7 +6,7 @@ require (
 	github.com/99designs/gqlgen v0.13.0
 	github.com/diwise/api-temperature v0.0.0-20210519153202-9fa4ca24d641
 	github.com/diwise/messaging-golang v0.0.0-20210519125901-747dbe4d4b42
-	github.com/diwise/ngsi-ld-golang v0.0.0-20210519125641-0cb62633de46
+	github.com/diwise/ngsi-ld-golang v0.0.0-20210618140137-edadb9cb80e4
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/rs/cors v1.7.0
 	github.com/sirupsen/logrus v1.8.1
