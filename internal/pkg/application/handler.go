@@ -315,7 +315,7 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 
 func isActiveWaterTempSensor(sensor string) bool {
 	// TODO: Replace this hard codery with a status flag on the actual Device instead
-	return strings.HasSuffix(sensor, "sk-elt-temp-01") || strings.HasSuffix(sensor, "sk-elt-temp-02")
+	return strings.HasSuffix(sensor, "sk-elt-temp-02") || strings.HasSuffix(sensor, "sk-elt-temp-08") || strings.HasSuffix(sensor, "sk-elt-temp-11") || strings.HasSuffix(sensor, "sk-elt-temp-13") || strings.HasSuffix(sensor, "sk-elt-temp-16") || strings.HasSuffix(sensor, "sk-elt-temp-20") || strings.HasSuffix(sensor, "sk-elt-temp-23") || strings.HasSuffix(sensor, "sk-elt-temp-25") || strings.HasSuffix(sensor, "sk-elt-temp-27")
 }
 
 //This is a hack to decode the value and send it as a telemetry message over RabbitMQ for PoC purposes.
