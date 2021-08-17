@@ -113,6 +113,7 @@ func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
 	m := msgMock{}
 
 	jsonBytes, _ := json.Marshal(createDevicePatchWithValue("sk-elt-temp-02", "t%3D12"))
+
 	req, _ := http.NewRequest("PATCH", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:Device:sk-elt-temp-02/attrs/"), bytes.NewBuffer(jsonBytes))
 	w := httptest.NewRecorder()
 	log := logging.NewLogger()
@@ -234,5 +235,9 @@ func (db *dbMock) GetDeviceModelFromPrimaryKey(id uint) (*models.DeviceModel, er
 }
 
 func (db *dbMock) UpdateDeviceValue(deviceID, value string) error {
+	return nil
+}
+
+func (db *dbMock) UpdateDeviceLocation(deviceID string, lat, lon float64) error {
 	return nil
 }

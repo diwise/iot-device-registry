@@ -28,6 +28,7 @@ type Datastore interface {
 	GetDeviceModels() ([]models.DeviceModel, error)
 	GetDeviceModelFromID(id string) (*models.DeviceModel, error)
 	GetDeviceModelFromPrimaryKey(id uint) (*models.DeviceModel, error)
+	UpdateDeviceLocation(deviceID string, lat, lon float64) error
 	UpdateDeviceValue(deviceID, value string) error
 }
 
@@ -123,7 +124,7 @@ func NewDatabaseConnection(connect ConnectorFunc, log logging.Logger) (Datastore
 	}
 
 	db := &myDB{
-		impl: impl,
+		impl: impl.Debug(),
 	}
 
 	db.impl.AutoMigrate(&models.DeviceControlledProperty{})
@@ -371,6 +372,20 @@ func (db *myDB) GetDeviceModelFromPrimaryKey(id uint) (*models.DeviceModel, erro
 	}
 
 	return deviceModel, nil
+}
+
+func (db *myDB) UpdateDeviceLocation(deviceID string, lat, lon float64) error {
+	device := &models.Device{}
+	result := db.impl.Where("device_id = ?", deviceID).First(device)
+	if result.Error != nil {
+		return result.Error
+	} else if result.RowsAffected != 1 {
+		return errors.New("attempt to update non existing device")
+	}
+
+	db.impl.Model(&device).Updates(models.Device{Latitude: lat, Longitude: lon})
+
+	return nil
 }
 
 func (db *myDB) UpdateDeviceValue(deviceID, value string) error {

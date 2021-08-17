@@ -47,7 +47,28 @@ Check That Update Entity Attributes Updates Values Correctly
     ${deviceValue}=     Get From Dictionary     ${resp.json()}     value
     ${value}=           Get From Dictionary     ${deviceValue}     value
 
-    Should Be Equal As Strings   snow=25;t=12  ${value}
+    Should Be Equal As Strings   snow%3D25%3Bt%3D12  ${value}
+
+Check That Update Entity Attributes Updates Location Correctly
+    ${deviceID}=    Set Variable        urn:ngsi-ld:Device:${TEST_ID_PRFX}:mydevice
+    ${longitude}=       Convert To Number        0.0 
+    ${latitude}=        Convert To Number        0.0
+    ${resp}=            Update Device Location  diwise  ${deviceID}  ${latitude}  ${longitude}
+
+    Update Device Location      diwise  ${deviceID}  ${latitude}  ${longitude}
+
+    ${longitude}=       Convert To Number        17.3069 
+    ${latitude}=        Convert To Number        62.3908
+
+    ${resp}=            Update Device Location  diwise  ${deviceID}  ${latitude}  ${longitude}    
+    Status Should Be    204     ${resp}
+    
+    ${resp}=            GET On Session          diwise      /ngsi-ld/v1/entities/${deviceID}
+    ${deviceLocation}=     Get From Dictionary     ${resp.json()}     location
+    ${location}=           Get From Dictionary     ${deviceLocation}     value
+    ${coordinates}=        Get From Dictionary     ${location}     coordinates
+
+    Should Be Equal As Strings  [17.3069, 62.3908]   ${coordinates}
 
 
 Check That On Off Values Can Be Handled
@@ -75,6 +96,8 @@ Check Date Last Value Reported Updates Correctly
     ${resp}=            GET On Session       diwise  /ngsi-ld/v1/entities/${deviceID}
     ${firstDateValueReported}=            Get From Dictionary  ${resp.json()}       dateLastValueReported
 
+    #temporary fix:
+    BuiltIn.Sleep       1s
 
     ${resp}=            Update Device Value  diwise  ${deviceID}  t=25
     ${resp}=            GET On Session       diwise  /ngsi-ld/v1/entities/${deviceID}
