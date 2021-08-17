@@ -260,7 +260,9 @@ func (cs *contextSource) RetrieveEntity(entityID string, req ngsi.Request) (ngsi
 			)
 		}
 
-		fiwareDevice.Location = geojson.CreateGeoJSONPropertyFromWGS84(device.Longitude, device.Latitude)
+		if device.Latitude != 0.0 && device.Longitude != 0.0 {
+			fiwareDevice.Location = geojson.CreateGeoJSONPropertyFromWGS84(device.Longitude, device.Latitude)
+		}
 
 		return fiwareDevice, nil
 	} else if strings.HasPrefix(entityID, fiware.DeviceModelIDPrefix) {

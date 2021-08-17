@@ -55,11 +55,8 @@ Check That Update Entity Attributes Updates Location Correctly
     ${latitude}=        Set Variable       0.0
     ${resp}=            Update Device Location  diwise  ${deviceID}  ${latitude}  ${longitude}
 
-    Update Device Location      diwise  ${deviceID}  ${latitude}  ${longitude}
-
     ${longitude}=       Set Variable       17.3069 
     ${latitude}=        Set Variable       62.3908
-
     ${resp}=            Update Device Location  diwise  ${deviceID}  ${latitude}  ${longitude}    
     Status Should Be    204     ${resp}
     
