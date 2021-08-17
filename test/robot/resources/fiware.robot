@@ -57,8 +57,8 @@ Create Text List Property
 
 Create GeoJSON Property
     [Arguments]     ${latitude}     ${longitude}
-    Convert To Number   ${latitude}
-    Convert To Number   ${longitude}
+    ${latitude}=    Convert To Number   ${latitude} 
+    ${longitude}=   Convert To Number   ${longitude}
     @{coordinates}=   Create List   ${latitude}     ${longitude}
     ${value}=   Create Dictionary     coordinates=@{coordinates}   type=Point
     ${gjp}=     Create Dictionary   type=GeoProperty    value=${value}

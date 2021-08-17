@@ -124,7 +124,7 @@ func NewDatabaseConnection(connect ConnectorFunc, log logging.Logger) (Datastore
 	}
 
 	db := &myDB{
-		impl: impl.Debug(),
+		impl: impl,
 	}
 
 	db.impl.AutoMigrate(&models.DeviceControlledProperty{})

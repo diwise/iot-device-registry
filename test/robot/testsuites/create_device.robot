@@ -51,14 +51,14 @@ Check That Update Entity Attributes Updates Values Correctly
 
 Check That Update Entity Attributes Updates Location Correctly
     ${deviceID}=    Set Variable        urn:ngsi-ld:Device:${TEST_ID_PRFX}:mydevice
-    ${longitude}=       Convert To Number        0.0 
-    ${latitude}=        Convert To Number        0.0
+    ${longitude}=       Set Variable       0.0 
+    ${latitude}=        Set Variable       0.0
     ${resp}=            Update Device Location  diwise  ${deviceID}  ${latitude}  ${longitude}
 
     Update Device Location      diwise  ${deviceID}  ${latitude}  ${longitude}
 
-    ${longitude}=       Convert To Number        17.3069 
-    ${latitude}=        Convert To Number        62.3908
+    ${longitude}=       Set Variable       17.3069 
+    ${latitude}=        Set Variable       62.3908
 
     ${resp}=            Update Device Location  diwise  ${deviceID}  ${latitude}  ${longitude}    
     Status Should Be    204     ${resp}

@@ -302,10 +302,10 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 
 	if updateSource.Location != nil {
 
-		lat := updateSource.Location.GetAsPoint().Coordinates[0]
-		lon := updateSource.Location.GetAsPoint().Coordinates[1]
+		lon := updateSource.Location.GetAsPoint().Coordinates[0]
+		lat := updateSource.Location.GetAsPoint().Coordinates[1]
 
-		cs.log.Infof("updating device %s location to %f, %f", device.DeviceID, lon, lat)
+		cs.log.Infof("updating device %s location to (%f, %f)", device.DeviceID, lat, lon)
 
 		err = cs.db.UpdateDeviceLocation(device.DeviceID, lat, lon)
 		if err != nil {
