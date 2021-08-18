@@ -4,6 +4,7 @@ import (
 	"compress/flate"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -260,7 +261,7 @@ func (cs *contextSource) RetrieveEntity(entityID string, req ngsi.Request) (ngsi
 			)
 		}
 
-		if device.Latitude != 0.0 && device.Longitude != 0.0 {
+		if device.Latitude != math.Abs(0.0) && device.Longitude != math.Abs(0.0) {
 			fiwareDevice.Location = geojson.CreateGeoJSONPropertyFromWGS84(device.Longitude, device.Latitude)
 		}
 
