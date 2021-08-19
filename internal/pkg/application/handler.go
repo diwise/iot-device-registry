@@ -261,7 +261,7 @@ func (cs *contextSource) RetrieveEntity(entityID string, req ngsi.Request) (ngsi
 			)
 		}
 
-		if device.Latitude != math.Abs(0.0) && device.Longitude != math.Abs(0.0) {
+		if math.Abs(device.Latitude) > 0.1 || math.Abs(device.Longitude) > 0.1 {
 			fiwareDevice.Location = geojson.CreateGeoJSONPropertyFromWGS84(device.Longitude, device.Latitude)
 		}
 
