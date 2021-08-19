@@ -4,6 +4,7 @@ import (
 	"compress/flate"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/diwise/ngsi-ld-golang/pkg/datamodels/fiware"
 	ngsi "github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld"
+	"github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld/geojson"
 	ngsitypes "github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld/types"
 )
 
@@ -259,6 +261,10 @@ func (cs *contextSource) RetrieveEntity(entityID string, req ngsi.Request) (ngsi
 			)
 		}
 
+		if math.Abs(device.Latitude) > 0.1 || math.Abs(device.Longitude) > 0.1 {
+			fiwareDevice.Location = geojson.CreateGeoJSONPropertyFromWGS84(device.Longitude, device.Latitude)
+		}
+
 		return fiwareDevice, nil
 	} else if strings.HasPrefix(entityID, fiware.DeviceModelIDPrefix) {
 		shortEntityID := entityID[len(fiware.DeviceModelIDPrefix):]
@@ -297,16 +303,31 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 		return err
 	}
 
-	value, err := url.QueryUnescape(updateSource.Value.Value)
-	if err == nil {
-		err = cs.db.UpdateDeviceValue(shortEntityID, value)
+	if updateSource.Location != nil {
+
+		lon := updateSource.Location.GetAsPoint().Coordinates[0]
+		lat := updateSource.Location.GetAsPoint().Coordinates[1]
+
+		cs.log.Infof("updating device %s location to (%f, %f)", device.DeviceID, lat, lon)
+
+		err = cs.db.UpdateDeviceLocation(device.DeviceID, lat, lon)
+		if err != nil {
+			cs.log.Error("unable to update device %s with new location", entityID)
+		}
+	}
+
+	if updateSource.Value != nil {
+		value, err := url.QueryUnescape(updateSource.Value.Value)
 		if err == nil {
-			postWaterTempTelemetryIfDeviceIsAWaterTempDevice(
-				cs,
-				shortEntityID,
-				device.Latitude, device.Longitude,
-				value,
-			)
+			err = cs.db.UpdateDeviceValue(shortEntityID, value)
+			if err == nil {
+				postWaterTempTelemetryIfDeviceIsAWaterTempDevice(
+					cs,
+					shortEntityID,
+					device.Latitude, device.Longitude,
+					value,
+				)
+			}
 		}
 	}
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -113,6 +114,7 @@ func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
 	m := msgMock{}
 
 	jsonBytes, _ := json.Marshal(createDevicePatchWithValue("sk-elt-temp-02", "t%3D12"))
+
 	req, _ := http.NewRequest("PATCH", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:Device:sk-elt-temp-02/attrs/"), bytes.NewBuffer(jsonBytes))
 	w := httptest.NewRecorder()
 	log := logging.NewLogger()
@@ -144,7 +146,63 @@ func TestRetrieveEntity(t *testing.T) {
 	}
 }
 
+func TestThatRetrieveEntityDoesNotReturnZeroLocations(t *testing.T) {
+	db := &dbMock{
+		deviceFromID: &models.Device{
+			DeviceID: "urn:ngsi-ld:Device:sk-elt-temp-02",
+			Value:    "t=12",
+		},
+		deviceModelReturned: &models.DeviceModel{},
+	}
+
+	log := logging.NewLogger()
+	req, _ := http.NewRequest("GET", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:Device:sk-elt-temp-02"), nil)
+	w := httptest.NewRecorder()
+
+	ctxreg := createContextRegistry(log, nil, db)
+
+	ngsi.NewRetrieveEntityHandler(ctxreg).ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Request failed: %d", w.Code)
+	}
+
+	responseBytes, err := ioutil.ReadAll(w.Body)
+	if err != nil {
+		t.Errorf("failed to read response body: %s", err.Error())
+	}
+
+	deviceStr, err := getDeviceAsString(responseBytes, log)
+	if err != nil {
+		t.Errorf("failed to get device as string: %s", err.Error())
+	}
+
+	if strings.Compare(deviceStr, zeroLocationDevice) == 1 {
+		t.Errorf("RetrieveEntity returned a zero location: %s", deviceStr)
+	}
+
+}
+
+const zeroLocationDevice string = `{"id":"urn:ngsi-ld:Device:sk-elt-temp-02","type":"Device","@context":["https://schema.lab.fiware.org/ld/context","https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld"],"value":{"type":"Property","value":"t%3D12"},"refDeviceModel":{"type":"Relationship","object":"urn:ngsi-ld:DeviceModel:"}}`
+
 // write unit test for retrieve entity where device is nil.
+
+func getDeviceAsString(response []byte, log logging.Logger) (string, error) {
+	device := fiware.Device{}
+
+	err := json.Unmarshal(response, &device)
+	if err != nil {
+		log.Errorf("failed to unmarshal device json: %s", err.Error())
+	}
+
+	deviceStr, err := json.Marshal(device)
+	if err != nil {
+		log.Errorf("could not marshal device to json string: %s", err.Error())
+		return "", err
+	}
+
+	return string(deviceStr), nil
+}
 
 func createDevicePatchWithValue(deviceid, value string) *fiware.Device {
 	device := fiware.NewDevice(deviceid, value)
@@ -234,5 +292,9 @@ func (db *dbMock) GetDeviceModelFromPrimaryKey(id uint) (*models.DeviceModel, er
 }
 
 func (db *dbMock) UpdateDeviceValue(deviceID, value string) error {
+	return nil
+}
+
+func (db *dbMock) UpdateDeviceLocation(deviceID string, lat, lon float64) error {
 	return nil
 }

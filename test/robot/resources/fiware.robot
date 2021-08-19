@@ -55,6 +55,14 @@ Create Text List Property
     ${tlp}=     Create Dictionary  type=Property  value=@{props}
     [Return]    ${tlp}
 
+Create GeoJSON Property
+    [Arguments]     ${latitude}     ${longitude}
+    ${latitude}=    Convert To Number   ${latitude} 
+    ${longitude}=   Convert To Number   ${longitude}
+    @{coordinates}=   Create List   ${latitude}     ${longitude}
+    ${value}=   Create Dictionary     coordinates=@{coordinates}   type=Point
+    ${gjp}=     Create Dictionary   type=GeoProperty    value=${value}
+    [Return]    ${gjp}
 
 Entity Type And ID Should Match
     [Arguments]     ${entity}   ${type}   ${id}
@@ -70,5 +78,13 @@ Update Device Value
     ${device}=      Create Fiware Entity   id=${id}   type=Device
     ${valueprop}=   Create Text Property  ${value}
     Set To Dictionary   ${device}    value  ${valueprop}
+    ${resp}=        PATCH On Session  ${session}  /ngsi-ld/v1/entities/${id}/attrs/  json=${device}
+    [Return]        ${resp}
+
+Update Device Location
+    [Arguments]     ${session}  ${id}  ${latitude}  ${longitude}
+    ${device}=      Create Fiware Entity   id=${id}   type=Device
+    ${locationprop}=    Create GeoJSON Property     ${latitude}  ${longitude}
+    Set To Dictionary   ${device}   location   ${locationprop}
     ${resp}=        PATCH On Session  ${session}  /ngsi-ld/v1/entities/${id}/attrs/  json=${device}
     [Return]        ${resp}
