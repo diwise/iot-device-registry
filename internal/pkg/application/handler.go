@@ -16,8 +16,9 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/httplog"
 
 	temperaturecmds "github.com/diwise/api-temperature/pkg/infrastructure/messaging/commands"
 	gql "github.com/diwise/iot-device-registry/internal/pkg/_presentation/api/graphql"
@@ -88,7 +89,11 @@ func newRequestRouter() *RequestRouter {
 	// Enable gzip compression for ngsi-ld responses
 	compressor := middleware.NewCompressor(flate.DefaultCompression, "application/json", "application/ld+json")
 	router.impl.Use(compressor.Handler)
-	router.impl.Use(middleware.Logger)
+
+	logger := httplog.NewLogger("iot-device-registry", httplog.Options{
+		JSON: true,
+	})
+	router.impl.Use(httplog.RequestLogger(logger))
 
 	return router
 }
