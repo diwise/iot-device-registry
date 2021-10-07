@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -12,12 +11,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/logging"
+	"github.com/matryer/is"
+
+	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/repositories/database"
 	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/repositories/models"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/ngsi-ld-golang/pkg/datamodels/fiware"
 	ngsi "github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld"
 	ngsitypes "github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld/types"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 func TestMain(m *testing.M) {
@@ -25,68 +28,67 @@ func TestMain(m *testing.M) {
 }
 
 func TestThatCreateEntityDoesNotAcceptUnknownBody(t *testing.T) {
+	is := is.New(t)
+
 	bodyContents := []byte("{\"json\":\"json\"}")
 	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(bodyContents))
 	w := httptest.NewRecorder()
-	log := logging.NewLogger()
 
-	ctxreg := createContextRegistry(log, nil, nil)
+	ctxreg := createContextRegistry(log.Logger, nil, nil)
 	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Error("CreateEntity did not return a BadRequest status.")
-	}
+	is.Equal(w.Code, http.StatusBadRequest) // create entity should return bad request
 }
 
 func TestThatCreateEntityStoresCorrectDevice(t *testing.T) {
-	db := &dbMock{}
+	is := is.New(t)
+
+	//db := &dbMock{}
 	deviceID := fiware.DeviceIDPrefix + "deviceID"
 	device := fiware.NewDevice(deviceID, "")
 	device.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(
 		fiware.DeviceModelIDPrefix + "livboj",
 	)
 	jsonBytes, _ := json.Marshal(device)
-	log := logging.NewLogger()
 
 	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(jsonBytes))
 	w := httptest.NewRecorder()
 
-	ctxreg := createContextRegistry(log, nil, db)
+	db := &database.DatastoreMock{}
+
+	ctxreg := createContextRegistry(log.Logger, nil, db)
 	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
 
-	if db.createCount != 1 {
-		t.Error("CreateCount should be 1, but was ", db.createCount, "!")
-	}
-
-	if db.device.ID != deviceID {
-		t.Error("DeviceID should be " + deviceID + ", but was " + db.device.ID)
-	}
+	is.Equal(len(db.CreateDeviceCalls()), 1)                // create count should be 1
+	is.Equal(db.CreateDeviceCalls()[0].Device.ID, deviceID) // device id must match
 }
 
 func TestThatCreateEntityStoresCorrectDeviceModel(t *testing.T) {
-	db := &dbMock{}
+	is := is.New(t)
 
 	categories := []string{"sensor"}
 	deviceModel := fiware.NewDeviceModel("badtemperatur", categories)
 	deviceModel.ControlledProperty = ngsitypes.NewTextListProperty([]string{"temperature"})
 
 	jsonBytes, _ := json.Marshal(deviceModel)
-	log := logging.NewLogger()
 
 	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(jsonBytes))
 	w := httptest.NewRecorder()
 
-	ctxreg := createContextRegistry(log, nil, db)
+	db := &database.DatastoreMock{}
+	ctxreg := createContextRegistry(log.Logger, nil, db)
 	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
 
-	if db.createCount != 1 {
-		t.Error("CreateCount should be 1, but was ", db.createCount, "!")
-	}
+	is.Equal(len(db.CreateDeviceModelCalls()), 1) // create count should be 1
 }
 
 func TestThatCreateEntityFailsOnUnknownEntity(t *testing.T) {
-	db := &dbMock{
-		createDeviceModelError: errors.New("test"),
+	is := is.New(t)
+
+	db := &database.DatastoreMock{
+		CreateDeviceModelFunc: func(*fiware.DeviceModel) (*models.DeviceModel, error) {
+			return nil, errors.New("create should fail")
+		},
 	}
 
 	categories := []string{"sensor"}
@@ -94,110 +96,152 @@ func TestThatCreateEntityFailsOnUnknownEntity(t *testing.T) {
 	deviceModel.ControlledProperty = ngsitypes.NewTextListProperty([]string{"temperature"})
 
 	jsonBytes, _ := json.Marshal(deviceModel)
-	log := logging.NewLogger()
 
 	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(jsonBytes))
 	w := httptest.NewRecorder()
 
-	ctxreg := createContextRegistry(log, nil, db)
+	ctxreg := createContextRegistry(log.Logger, nil, db)
 	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Error("CreateEntity did not return a BadRequest status.")
-	}
+	is.Equal(w.Code, http.StatusBadRequest) // create entity should return bad request
 }
 
 func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
-	db := &dbMock{
-		deviceFromID: &models.Device{Latitude: 64, Longitude: 17},
+	is := is.New(t)
+
+	db := &database.DatastoreMock{
+		GetDeviceFromIDFunc: func(string) (*models.Device, error) {
+			return &models.Device{Latitude: 64, Longitude: 17}, nil
+		},
 	}
-	m := msgMock{}
+	m := messaging.ContextMock{}
 
 	jsonBytes, _ := json.Marshal(createDevicePatchWithValue("sk-elt-temp-02", "t%3D12"))
 
 	req, _ := http.NewRequest("PATCH", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:Device:sk-elt-temp-02/attrs/"), bytes.NewBuffer(jsonBytes))
 	w := httptest.NewRecorder()
-	log := logging.NewLogger()
 
-	ctxreg := createContextRegistry(log, &m, db)
+	ctxreg := createContextRegistry(log.Logger, &m, db)
 	ngsi.NewUpdateEntityAttributesHandler(ctxreg).ServeHTTP(w, req)
 
-	if m.CommandCount != 1 {
-		t.Error("Wrong command count: ", m.CommandCount, "!=", 1)
+	is.Equal(len(m.SendCommandToCalls()), 1) // expected 1 command to have been sent
+}
+
+func TestThatPatchAmbientTempDevicePublishesOnTheMessageQueue(t *testing.T) {
+	is := is.New(t)
+
+	db := &database.DatastoreMock{
+		GetDeviceFromIDFunc: func(string) (*models.Device, error) {
+			return &models.Device{Latitude: 64, Longitude: 17}, nil
+		},
 	}
+	m := messaging.ContextMock{}
+
+	jsonBytes, _ := json.Marshal(createDevicePatchWithValue("se:trafikverket:temp:SE_STA_VVIS2115", "t%3D12"))
+
+	req, _ := http.NewRequest("PATCH", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:Device:se:trafikverket:temp:SE_STA_VVIS2115/attrs/"), bytes.NewBuffer(jsonBytes))
+	w := httptest.NewRecorder()
+
+	ctxreg := createContextRegistry(log.Logger, &m, db)
+	ngsi.NewUpdateEntityAttributesHandler(ctxreg).ServeHTTP(w, req)
+
+	is.Equal(len(m.SendCommandToCalls()), 1) // expected 1 command to have been sent
+}
+
+func TestThatPatchDeviceWithNoTempDoesNotPublishOnTheMessageQueue(t *testing.T) {
+	is := is.New(t)
+
+	db := &database.DatastoreMock{
+		GetDeviceFromIDFunc: func(string) (*models.Device, error) {
+			return &models.Device{Latitude: 64, Longitude: 17}, nil
+		},
+	}
+	m := messaging.ContextMock{}
+
+	jsonBytes, _ := json.Marshal(createDevicePatchWithValue("se:trafikverket:temp:SE_STA_VVIS2115", "co2%3D12"))
+
+	req, _ := http.NewRequest("PATCH", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:Device:se:trafikverket:temp:SE_STA_VVIS2115/attrs/"), bytes.NewBuffer(jsonBytes))
+	w := httptest.NewRecorder()
+
+	ctxreg := createContextRegistry(log.Logger, &m, db)
+	ngsi.NewUpdateEntityAttributesHandler(ctxreg).ServeHTTP(w, req)
+
+	is.Equal(len(m.SendCommandToCalls()), 0) // expected 0 commands to have been sent
 }
 
 func TestRetrieveEntity(t *testing.T) {
-	db := &dbMock{
-		deviceFromID:        &models.Device{},
-		deviceModelReturned: &models.DeviceModel{},
+	is := is.New(t)
+
+	db := &database.DatastoreMock{
+		GetDeviceModelFromIDFunc: func(string) (*models.DeviceModel, error) {
+			return &models.DeviceModel{}, nil
+		},
+		GetDeviceFromIDFunc: func(string) (*models.Device, error) {
+			return &models.Device{}, nil
+		},
 	}
 
-	log := logging.NewLogger()
 	req, _ := http.NewRequest("GET", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:DeviceModel:sk-elt-temp-02"), nil)
 	w := httptest.NewRecorder()
 
-	ctxreg := createContextRegistry(log, nil, db)
+	ctxreg := createContextRegistry(log.Logger, nil, db)
 
 	ngsi.NewRetrieveEntityHandler(ctxreg).ServeHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Request failed: %d", w.Code)
-	}
+	is.Equal(w.Code, http.StatusOK) // request failed
 }
 
 func TestThatRetrieveEntityDoesNotReturnZeroLocations(t *testing.T) {
-	db := &dbMock{
-		deviceFromID: &models.Device{
-			DeviceID: "urn:ngsi-ld:Device:sk-elt-temp-02",
-			Value:    "t=12",
+	is := is.New(t)
+
+	db := &database.DatastoreMock{
+		GetDeviceModelFromPrimaryKeyFunc: func(uint) (*models.DeviceModel, error) {
+			return &models.DeviceModel{}, nil
 		},
-		deviceModelReturned: &models.DeviceModel{},
+		GetDeviceFromIDFunc: func(string) (*models.Device, error) {
+			return &models.Device{
+				DeviceID: "urn:ngsi-ld:Device:sk-elt-temp-02",
+				Value:    "t=12",
+			}, nil
+		},
 	}
 
-	log := logging.NewLogger()
 	req, _ := http.NewRequest("GET", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:Device:sk-elt-temp-02"), nil)
 	w := httptest.NewRecorder()
 
-	ctxreg := createContextRegistry(log, nil, db)
+	logger := log.Logger
+
+	ctxreg := createContextRegistry(logger, nil, db)
 
 	ngsi.NewRetrieveEntityHandler(ctxreg).ServeHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Request failed: %d", w.Code)
-	}
+	is.Equal(w.Code, http.StatusOK) // request failed
 
 	responseBytes, err := ioutil.ReadAll(w.Body)
-	if err != nil {
-		t.Errorf("failed to read response body: %s", err.Error())
-	}
+	is.NoErr(err) // failed to read response body
 
-	deviceStr, err := getDeviceAsString(responseBytes, log)
-	if err != nil {
-		t.Errorf("failed to get device as string: %s", err.Error())
-	}
+	deviceStr, err := getDeviceAsString(responseBytes, logger)
+	is.NoErr(err) // failed to get device as string
 
-	if strings.Compare(deviceStr, zeroLocationDevice) == 1 {
-		t.Errorf("RetrieveEntity returned a zero location: %s", deviceStr)
-	}
-
+	is.Equal(deviceStr, zeroLocationDevice) // retrieve entity returned a zero location
 }
 
 const zeroLocationDevice string = `{"id":"urn:ngsi-ld:Device:sk-elt-temp-02","type":"Device","@context":["https://schema.lab.fiware.org/ld/context","https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld"],"value":{"type":"Property","value":"t%3D12"},"refDeviceModel":{"type":"Relationship","object":"urn:ngsi-ld:DeviceModel:"}}`
 
 // write unit test for retrieve entity where device is nil.
 
-func getDeviceAsString(response []byte, log logging.Logger) (string, error) {
+func getDeviceAsString(response []byte, log zerolog.Logger) (string, error) {
 	device := fiware.Device{}
 
 	err := json.Unmarshal(response, &device)
 	if err != nil {
-		log.Errorf("failed to unmarshal device json: %s", err.Error())
+		log.Error().Err(err).Msg("failed to unmarshal device json")
+		return "", err
 	}
 
 	deviceStr, err := json.Marshal(device)
 	if err != nil {
-		log.Errorf("could not marshal device to json string: %s", err.Error())
+		log.Error().Err(err).Msg("could not marshal device to json string")
 		return "", err
 	}
 
@@ -223,78 +267,4 @@ func createURL(path string, params ...string) string {
 	}
 
 	return url
-}
-
-type msgMock struct {
-	CommandCount uint32
-}
-
-func (m *msgMock) PublishOnTopic(message messaging.TopicMessage) error {
-	return nil
-}
-
-func (m *msgMock) SendCommandTo(command messaging.CommandMessage, key string) error {
-	m.CommandCount++
-	return nil
-}
-
-type dbMock struct {
-	createCount              uint32
-	device                   *fiware.Device
-	deviceModel              *fiware.DeviceModel
-	createDeviceModelError   error
-	deviceFromID             *models.Device
-	deviceFromIDError        error
-	deviceModelReturned      *models.DeviceModel
-	deviceModelReturnedError error
-}
-
-func (db *dbMock) CreateDevice(device *fiware.Device) (*models.Device, error) {
-	db.createCount++
-	db.device = device
-
-	return nil, nil
-}
-
-func (db *dbMock) CreateDeviceModel(deviceModel *fiware.DeviceModel) (*models.DeviceModel, error) {
-	if db.createDeviceModelError != nil {
-		return nil, db.createDeviceModelError
-	}
-
-	db.createCount++
-	db.deviceModel = deviceModel
-
-	return nil, nil
-}
-
-func (db *dbMock) GetDeviceFromID(id string) (*models.Device, error) {
-	if db.deviceFromID != nil || db.deviceFromIDError != nil {
-		return db.deviceFromID, db.deviceFromIDError
-	}
-
-	return nil, fmt.Errorf("Unexpected call to GetDeviceFromID with id %s", id)
-}
-
-func (db *dbMock) GetDevices() ([]models.Device, error) {
-	return []models.Device{}, nil
-}
-
-func (db *dbMock) GetDeviceModels() ([]models.DeviceModel, error) {
-	return []models.DeviceModel{}, nil
-}
-
-func (db *dbMock) GetDeviceModelFromID(id string) (*models.DeviceModel, error) {
-	return db.deviceModelReturned, db.deviceModelReturnedError
-}
-
-func (db *dbMock) GetDeviceModelFromPrimaryKey(id uint) (*models.DeviceModel, error) {
-	return db.deviceModelReturned, db.deviceModelReturnedError
-}
-
-func (db *dbMock) UpdateDeviceValue(deviceID, value string) error {
-	return nil
-}
-
-func (db *dbMock) UpdateDeviceLocation(deviceID string, lat, lon float64) error {
-	return nil
 }

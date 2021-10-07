@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/logging"
 	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/repositories/models"
 	"github.com/diwise/ngsi-ld-golang/pkg/datamodels/fiware"
+	"github.com/rs/zerolog"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -63,6 +63,7 @@ func GetFromContext(ctx context.Context) (Datastore, error) {
 
 type myDB struct {
 	impl *gorm.DB
+	log  zerolog.Logger
 
 	controlledProperties []models.DeviceControlledProperty
 }
@@ -75,10 +76,10 @@ func getEnv(key, fallback string) string {
 }
 
 //ConnectorFunc is used to inject a database connection method into NewDatabaseConnection
-type ConnectorFunc func() (*gorm.DB, error)
+type ConnectorFunc func() (*gorm.DB, zerolog.Logger, error)
 
 //NewPostgreSQLConnector opens a connection to a postgresql database
-func NewPostgreSQLConnector(log logging.Logger) ConnectorFunc {
+func NewPostgreSQLConnector(log zerolog.Logger) ConnectorFunc {
 	dbHost := os.Getenv("DIWISE_SQLDB_HOST")
 	username := os.Getenv("DIWISE_SQLDB_USER")
 	dbName := os.Getenv("DIWISE_SQLDB_NAME")
@@ -87,23 +88,36 @@ func NewPostgreSQLConnector(log logging.Logger) ConnectorFunc {
 
 	dbURI := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=%s password=%s", dbHost, username, dbName, sslMode, password)
 
-	return func() (*gorm.DB, error) {
+	return func() (*gorm.DB, zerolog.Logger, error) {
+		sublogger := log.With().Str("host", dbHost).Str("database", dbName).Logger()
+
 		for {
-			log.Infof("Connecting to database host %s ...\n", dbHost)
-			db, err := gorm.Open(postgres.Open(dbURI), &gorm.Config{})
+			sublogger.Info().Msg("connecting to database host")
+
+			db, err := gorm.Open(postgres.Open(dbURI), &gorm.Config{
+				Logger: logger.New(
+					&sublogger,
+					logger.Config{
+						SlowThreshold:             time.Second,
+						LogLevel:                  logger.Info,
+						IgnoreRecordNotFoundError: false,
+						Colorful:                  false,
+					},
+				),
+			})
 			if err != nil {
-				log.Fatalf("Failed to connect to database %s\n", err)
+				sublogger.Fatal().Err(err).Msg("failed to connect to database")
 				time.Sleep(3 * time.Second)
 			} else {
-				return db, nil
+				return db, sublogger, nil
 			}
 		}
 	}
 }
 
 //NewSQLiteConnector opens a connection to a local sqlite database
-func NewSQLiteConnector() ConnectorFunc {
-	return func() (*gorm.DB, error) {
+func NewSQLiteConnector(log zerolog.Logger) ConnectorFunc {
+	return func() (*gorm.DB, zerolog.Logger, error) {
 		db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{
 			Logger: logger.Default.LogMode(logger.Silent),
 		})
@@ -112,19 +126,20 @@ func NewSQLiteConnector() ConnectorFunc {
 			db.Exec("PRAGMA foreign_keys = ON")
 		}
 
-		return db, err
+		return db, log, err
 	}
 }
 
 //NewDatabaseConnection initializes a new connection to the database and wraps it in a Datastore
-func NewDatabaseConnection(connect ConnectorFunc, log logging.Logger) (Datastore, error) {
-	impl, err := connect()
+func NewDatabaseConnection(connect ConnectorFunc) (Datastore, error) {
+	impl, logger, err := connect()
 	if err != nil {
 		return nil, err
 	}
 
 	db := &myDB{
 		impl: impl,
+		log:  logger,
 	}
 
 	db.impl.AutoMigrate(&models.DeviceControlledProperty{})
@@ -149,14 +164,14 @@ func NewDatabaseConnection(connect ConnectorFunc, log logging.Logger) (Datastore
 
 		result := db.impl.Where("name = ?", property).First(&controlledProperty)
 		if result.RowsAffected == 0 {
-			log.Infof("ControlledProperty %s not found in database. Creating ...", property)
+			db.log.Info().Msgf("creating missing controlled property %s ...", property)
 
 			controlledProperty.Name = property
 			controlledProperty.Abbreviation = abbreviation
 			result = db.impl.Create(&controlledProperty)
 
 			if result.Error != nil {
-				log.Fatalf("Failed to seed DeviceControlledProperty into database %s", result.Error.Error())
+				db.log.Fatal().Err(result.Error).Msg("failed to seed device controlled property into database")
 				return nil, result.Error
 			}
 		}

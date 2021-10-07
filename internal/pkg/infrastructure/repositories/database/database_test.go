@@ -7,7 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/logging"
+	"github.com/rs/zerolog/log"
+
 	"github.com/diwise/ngsi-ld-golang/pkg/datamodels/fiware"
 	"github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld/types"
 )
@@ -242,8 +243,8 @@ func getErrorMessageOrString(err error, orString string) string {
 }
 
 func newDatabaseForTest(t *testing.T) (Datastore, bool) {
-	log := logging.NewLogger()
-	db, err := NewDatabaseConnection(NewSQLiteConnector(), log)
+	logger := log.Logger
+	db, err := NewDatabaseConnection(NewSQLiteConnector(logger))
 
 	if err != nil {
 		t.Error(err.Error())

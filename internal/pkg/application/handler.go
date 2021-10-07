@@ -22,12 +22,12 @@ import (
 
 	temperaturecmds "github.com/diwise/api-temperature/pkg/infrastructure/messaging/commands"
 	gql "github.com/diwise/iot-device-registry/internal/pkg/_presentation/api/graphql"
-	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/logging"
 	"github.com/diwise/iot-device-registry/internal/pkg/infrastructure/repositories/database"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/messaging-golang/pkg/messaging/telemetry"
 
 	"github.com/rs/cors"
+	"github.com/rs/zerolog"
 
 	"github.com/diwise/ngsi-ld-golang/pkg/datamodels/fiware"
 	ngsi "github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld"
@@ -114,7 +114,7 @@ type MessagingContext interface {
 	SendCommandTo(command messaging.CommandMessage, key string) error
 }
 
-func createContextRegistry(log logging.Logger, messenger MessagingContext, db database.Datastore) ngsi.ContextRegistry {
+func createContextRegistry(log zerolog.Logger, messenger MessagingContext, db database.Datastore) ngsi.ContextRegistry {
 	contextRegistry := ngsi.NewContextRegistry()
 	ctxSource := contextSource{db: db, log: log, messenger: messenger}
 	contextRegistry.Register(&ctxSource)
@@ -122,7 +122,7 @@ func createContextRegistry(log logging.Logger, messenger MessagingContext, db da
 }
 
 //CreateRouterAndStartServing sets up the NGSI-LD router and starts serving incoming requests
-func CreateRouterAndStartServing(log logging.Logger, messenger MessagingContext, db database.Datastore) {
+func CreateRouterAndStartServing(log zerolog.Logger, messenger MessagingContext, db database.Datastore) {
 	contextRegistry := createContextRegistry(log, messenger, db)
 	router := createRequestRouter(contextRegistry)
 
@@ -131,13 +131,15 @@ func CreateRouterAndStartServing(log logging.Logger, messenger MessagingContext,
 		port = "8880"
 	}
 
-	log.Infof("Starting iot-device-registry on port %s.\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, router.impl))
+	log.Info().Str("port", port).Msg("starting to listen for connections")
+
+	err := http.ListenAndServe(":"+port, router.impl)
+	log.Fatal().Err(err).Msg("failed to listen for connections")
 }
 
 type contextSource struct {
 	db        database.Datastore
-	log       logging.Logger
+	log       zerolog.Logger
 	messenger MessagingContext
 }
 
@@ -151,11 +153,13 @@ func (cs contextSource) ProvidesEntitiesWithMatchingID(entityID string) bool {
 func (cs *contextSource) CreateEntity(typeName, entityID string, req ngsi.Request) error {
 	var err error
 
+	sublogger := cs.log.With().Str("entityID", entityID).Str("entityType", typeName).Logger()
+
 	if typeName == "Device" {
 		device := &fiware.Device{}
 		err = req.DecodeBodyInto(device)
 		if err != nil {
-			cs.log.Errorf("Failed to decode body into Device: %s", err.Error())
+			sublogger.Error().Err(err).Msg("failed to decode body into Device")
 			return err
 		}
 
@@ -165,14 +169,14 @@ func (cs *contextSource) CreateEntity(typeName, entityID string, req ngsi.Reques
 		deviceModel := &fiware.DeviceModel{}
 		err = req.DecodeBodyInto(deviceModel)
 		if err != nil {
-			cs.log.Errorf("Failed to decode body into DeviceModel: %s", err.Error())
+			sublogger.Error().Err(err).Msg("failed to decode body into DeviceModel")
 			return err
 		}
 		_, err = cs.db.CreateDeviceModel(deviceModel)
 
 	} else {
-		errorMessage := fmt.Sprintf("Entity of type  " + typeName + " is not supported.")
-		cs.log.Errorf(errorMessage)
+		errorMessage := "entity type not supported"
+		sublogger.Error().Msg(errorMessage)
 		return errors.New(errorMessage)
 	}
 
@@ -240,6 +244,10 @@ func (cs *contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntiti
 	return err
 }
 
+func (cs contextSource) GetProvidedTypeFromID(entityID string) (string, error) {
+	return "", errors.New("not implemented")
+}
+
 func (cs contextSource) ProvidesAttribute(attributeName string) bool {
 	return attributeName == "value"
 }
@@ -297,10 +305,12 @@ func (cs *contextSource) RetrieveEntity(entityID string, req ngsi.Request) (ngsi
 
 func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Request) error {
 
+	sublogger := cs.log.With().Str("entityID", entityID).Logger()
+
 	updateSource := &fiware.Device{}
 	err := req.DecodeBodyInto(updateSource)
 	if err != nil {
-		cs.log.Errorf("Failed to decode PATCH body in UpdateEntityAttributes: %s", err.Error())
+		sublogger.Error().Err(err).Msg("failed to decode PATCH body in UpdateEntityAttributes")
 		return err
 	}
 
@@ -308,20 +318,23 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 	shortEntityID := entityID[len(fiware.DeviceIDPrefix):]
 	device, err := cs.db.GetDeviceFromID(shortEntityID)
 	if err != nil {
-		cs.log.Errorf("Unable to find device %s for attributes update.", entityID)
+		sublogger.Error().Err(err).Msg("unable to find device for attributes update")
 		return err
 	}
 
 	if updateSource.Location != nil {
 
-		lon := updateSource.Location.GetAsPoint().Coordinates[0]
-		lat := updateSource.Location.GetAsPoint().Coordinates[1]
+		lon := updateSource.Location.GetAsPoint().Longitude()
+		lat := updateSource.Location.GetAsPoint().Latitude()
 
-		cs.log.Infof("updating device %s location to (%f, %f)", device.DeviceID, lat, lon)
+		sublogger.Info().Msgf("updating device location to (%f, %f)", lat, lon)
 
 		err = cs.db.UpdateDeviceLocation(device.DeviceID, lat, lon)
 		if err != nil {
-			cs.log.Error("unable to update device %s with new location", entityID)
+			sublogger.Error().Err(err).Msg("unable to update device with new location")
+		} else {
+			device.Latitude = lat
+			device.Longitude = lon
 		}
 	}
 
@@ -330,17 +343,42 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 		if err == nil {
 			err = cs.db.UpdateDeviceValue(shortEntityID, value)
 			if err == nil {
-				postWaterTempTelemetryIfDeviceIsAWaterTempDevice(
-					cs,
-					shortEntityID,
-					device.Latitude, device.Longitude,
-					value,
-				)
+				temp, err := tempFromDeviceValue(value)
+				if err == nil {
+					if isActiveTempSensor(shortEntityID) {
+						postTempTelemetry(
+							cs,
+							shortEntityID,
+							device.Latitude, device.Longitude,
+							temp,
+						)
+					} else if isActiveWaterTempSensor(shortEntityID) {
+						postWaterTempTelemetry(
+							cs,
+							shortEntityID,
+							device.Latitude, device.Longitude,
+							temp,
+						)
+					}
+				}
 			}
 		}
 	}
 
 	return err
+}
+
+func isActiveTempSensor(sensor string) bool {
+	return strings.Contains(sensor, "se:trafikverket:temp:")
+}
+
+//This is a hack to decode the value and send it as a telemetry message over RabbitMQ for PoC purposes.
+func postTempTelemetry(cs *contextSource, device string, lat, lon, temp float64) {
+	tt := telemetry.NewTemperatureTelemetry(temp, device, lat, lon)
+	storeTempCommand := &temperaturecmds.StoreTemperatureUpdate{
+		Temperature: *tt,
+	}
+	cs.messenger.SendCommandTo(storeTempCommand, "api-temperature")
 }
 
 func isActiveWaterTempSensor(sensor string) bool {
@@ -349,39 +387,38 @@ func isActiveWaterTempSensor(sensor string) bool {
 }
 
 //This is a hack to decode the value and send it as a telemetry message over RabbitMQ for PoC purposes.
-func postWaterTempTelemetryIfDeviceIsAWaterTempDevice(cs *contextSource, device string, lat, lon float64, value string) {
-	if isActiveWaterTempSensor(device) {
-		decodedValue, err := url.QueryUnescape(value)
-		if err != nil {
-			return
+func postWaterTempTelemetry(cs *contextSource, device string, lat, lon, temp float64) {
+	// TODO: Make this configurable
+	const MinTemp float64 = -0.5
+	const MaxTemp float64 = 28.0
+	if temp >= MinTemp && temp <= MaxTemp {
+		wtt := telemetry.NewWaterTemperatureTelemetry(temp, device, lat, lon)
+		storeTempCommand := &temperaturecmds.StoreWaterTemperatureUpdate{
+			WaterTemperature: *wtt,
 		}
+		cs.messenger.SendCommandTo(storeTempCommand, "api-temperature")
+	} else {
+		cs.log.Info().Str("entityID", device).Msgf(
+			"ignored water temp value: %f not in allowed range [%f,%f]",
+			temp, MinTemp, MaxTemp,
+		)
+	}
+}
 
-		values := strings.Split(decodedValue, ";")
-		for _, v := range values {
-			parts := strings.Split(v, "=")
-			if len(parts) == 2 {
-				if parts[0] == "t" {
-					temp, err := strconv.ParseFloat(parts[1], 64)
-					if err == nil {
-						// TODO: Make this configurable
-						const MinTemp float64 = -0.5
-						const MaxTemp float64 = 28.0
-						if temp >= MinTemp && temp <= MaxTemp {
-							wtt := telemetry.NewWaterTemperatureTelemetry(temp, device, lat, lon)
-							storeTempCommand := &temperaturecmds.StoreWaterTemperatureUpdate{
-								WaterTemperature: *wtt,
-							}
-							cs.messenger.SendCommandTo(storeTempCommand, "api-temperature")
-						} else {
-							cs.log.Infof(
-								"ignored water temp value from %s: %f not in allowed range [%f,%f]",
-								device, temp, MinTemp, MaxTemp,
-							)
-						}
-					}
-					return
+func tempFromDeviceValue(value string) (float64, error) {
+
+	values := strings.Split(value, ";")
+	for _, v := range values {
+		parts := strings.Split(v, "=")
+		if len(parts) == 2 {
+			if parts[0] == "t" {
+				temp, err := strconv.ParseFloat(parts[1], 64)
+				if err == nil {
+					return temp, nil
 				}
 			}
 		}
 	}
+
+	return 0.0, fmt.Errorf("no temperature found in value %s", value)
 }
