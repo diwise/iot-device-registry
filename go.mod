@@ -9,6 +9,7 @@ require (
 	github.com/diwise/ngsi-ld-golang v0.0.0-20210920211437-fe3883cb7dcd
 	github.com/go-chi/chi/v5 v5.0.4
 	github.com/go-chi/httplog v0.2.0
+	github.com/matryer/is v1.4.0
 	github.com/rs/cors v1.7.0
 	github.com/rs/zerolog v1.25.0
 	github.com/vektah/gqlparser/v2 v2.1.0
