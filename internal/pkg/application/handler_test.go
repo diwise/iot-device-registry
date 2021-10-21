@@ -116,7 +116,7 @@ func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
 	}
 	m := messaging.ContextMock{}
 
-	jsonBytes, _ := json.Marshal(createDevicePatchWithValue("sk-elt-temp-02", "t%3D12"))
+	jsonBytes, _ := json.Marshal(createDevicePatchWithValue("sk-elt-temp-02", "t%3D8"))
 
 	req, _ := http.NewRequest("PATCH", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:Device:sk-elt-temp-02/attrs/"), bytes.NewBuffer(jsonBytes))
 	w := httptest.NewRecorder()

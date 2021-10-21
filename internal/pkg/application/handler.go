@@ -386,11 +386,10 @@ func isActiveWaterTempSensor(sensor string) bool {
 	return strings.HasSuffix(sensor, "sk-elt-temp-02") || strings.HasSuffix(sensor, "sk-elt-temp-08") || strings.HasSuffix(sensor, "sk-elt-temp-11") || strings.HasSuffix(sensor, "sk-elt-temp-13") || strings.HasSuffix(sensor, "sk-elt-temp-16") || strings.HasSuffix(sensor, "sk-elt-temp-20") || strings.HasSuffix(sensor, "sk-elt-temp-23") || strings.HasSuffix(sensor, "sk-elt-temp-25") || strings.HasSuffix(sensor, "sk-elt-temp-27")
 }
 
-//This is a hack to decode the value and send it as a telemetry message over RabbitMQ for PoC purposes.
 func postWaterTempTelemetry(cs *contextSource, device string, lat, lon, temp float64) {
 	// TODO: Make this configurable
-	const MinTemp float64 = -0.5
-	const MaxTemp float64 = 28.0
+	const MinTemp float64 = 0.5
+	const MaxTemp float64 = 10.0
 	if temp >= MinTemp && temp <= MaxTemp {
 		wtt := telemetry.NewWaterTemperatureTelemetry(temp, device, lat, lon)
 		storeTempCommand := &temperaturecmds.StoreWaterTemperatureUpdate{
