@@ -155,21 +155,20 @@ func (cs *contextSource) CreateEntity(typeName, entityID string, req ngsi.Reques
 
 	sublogger := cs.log.With().Str("entityID", entityID).Str("entityType", typeName).Logger()
 
-	if typeName == "Device" {
+	if typeName == fiware.DeviceTypeName {
 		device := &fiware.Device{}
 		err = req.DecodeBodyInto(device)
 		if err != nil {
-			sublogger.Error().Err(err).Msg("failed to decode body into Device")
+			sublogger.Error().Err(err).Msg("failed to decode request body")
 			return err
 		}
-
 		_, err = cs.db.CreateDevice(device)
 
-	} else if typeName == "DeviceModel" {
+	} else if typeName == fiware.DeviceModelTypeName {
 		deviceModel := &fiware.DeviceModel{}
 		err = req.DecodeBodyInto(deviceModel)
 		if err != nil {
-			sublogger.Error().Err(err).Msg("failed to decode body into DeviceModel")
+			sublogger.Error().Err(err).Msg("failed to decode request body")
 			return err
 		}
 		_, err = cs.db.CreateDeviceModel(deviceModel)
@@ -192,7 +191,7 @@ func (cs *contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntiti
 	}
 
 	for _, typeName := range query.EntityTypes() {
-		if typeName == "Device" {
+		if typeName == fiware.DeviceTypeName {
 			devices, err := cs.db.GetDevices()
 			if err != nil {
 				return fmt.Errorf("unable to get Device entities: %s", err.Error())
@@ -220,7 +219,7 @@ func (cs *contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntiti
 					break
 				}
 			}
-		} else if typeName == "DeviceModel" {
+		} else if typeName == fiware.DeviceModelTypeName {
 			deviceModels, err := cs.db.GetDeviceModels()
 			if err != nil {
 				return fmt.Errorf("unable to get DeviceModels: %s", err.Error())
@@ -249,11 +248,11 @@ func (cs contextSource) GetProvidedTypeFromID(entityID string) (string, error) {
 }
 
 func (cs contextSource) ProvidesAttribute(attributeName string) bool {
-	return attributeName == "value"
+	return (attributeName == "value" || attributeName == "deviceState")
 }
 
 func (cs contextSource) ProvidesType(typeName string) bool {
-	return (typeName == "DeviceModel" || typeName == "Device")
+	return (typeName == fiware.DeviceModelTypeName || typeName == fiware.DeviceTypeName)
 }
 
 func (cs *contextSource) RetrieveEntity(entityID string, req ngsi.Request) (ngsi.Entity, error) {
@@ -307,6 +306,14 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 
 	sublogger := cs.log.With().Str("entityID", entityID).Logger()
 
+	if !strings.HasPrefix(entityID, fiware.DeviceIDPrefix) {
+		sublogger.Error().Msgf("update entity attributes not supported for given entity id")
+		return fmt.Errorf("update entity attributes only implemented for %s*", fiware.DeviceIDPrefix)
+	}
+
+	// Truncate the fiware prefix from the device id string
+	shortEntityID := entityID[len(fiware.DeviceIDPrefix):]
+
 	updateSource := &fiware.Device{}
 	err := req.DecodeBodyInto(updateSource)
 	if err != nil {
@@ -314,8 +321,6 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 		return err
 	}
 
-	// Truncate the fiware prefix from the device id string
-	shortEntityID := entityID[len(fiware.DeviceIDPrefix):]
 	device, err := cs.db.GetDeviceFromID(shortEntityID)
 	if err != nil {
 		sublogger.Error().Err(err).Msg("unable to find device for attributes update")

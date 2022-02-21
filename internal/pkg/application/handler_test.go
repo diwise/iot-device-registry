@@ -212,9 +212,8 @@ func TestThatDeviceStateCanBeUpdated(t *testing.T) {
 	ctxreg := createContextRegistry(log.Logger, &m, db)
 	ngsi.NewUpdateEntityAttributesHandler(ctxreg).ServeHTTP(w, req)
 
-	is.Equal(db.UpdateDeviceValueCalls()[0].Value, "")
-
 	is.Equal(len(db.UpdateDeviceStateCalls()), 1) // expected update device state to be called once
+	is.Equal(db.UpdateDeviceStateCalls()[0].State, "on")
 }
 
 func TestRetrieveEntity(t *testing.T) {
