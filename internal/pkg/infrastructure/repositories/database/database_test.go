@@ -215,6 +215,25 @@ func TestUpdateDeviceValue(t *testing.T) {
 	}
 }
 
+func TestUpdateDeviceState(t *testing.T) {
+	if db, ok := newDatabaseForTest(t); ok {
+		if _, deviceID, ok := seedNewDevice(t, db); ok {
+
+			_ = db.UpdateDeviceState(deviceID, "on")
+			time.Sleep(10 * time.Millisecond)
+			_ = db.UpdateDeviceState(deviceID, "off")
+			time.Sleep(10 * time.Millisecond)
+			_ = db.UpdateDeviceState(deviceID, "on")
+			time.Sleep(10 * time.Millisecond)
+			err := db.UpdateDeviceState(deviceID, "off")
+
+			if err != nil {
+				t.Errorf("Failed to update device state: %s", err.Error())
+			}
+		}
+	}
+}
+
 func TestThatUpdateDeviceDoesNotSaveUnsupportedControlledProperty(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
 		if _, deviceID, ok := seedNewDevice(t, db); ok {

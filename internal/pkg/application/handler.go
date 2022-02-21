@@ -322,6 +322,10 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 		return err
 	}
 
+	if updateSource.DeviceState != nil {
+		cs.db.UpdateDeviceState(shortEntityID, updateSource.DeviceState.Value)
+	}
+
 	if updateSource.Location != nil {
 
 		lon := updateSource.Location.GetAsPoint().Longitude()

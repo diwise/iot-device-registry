@@ -43,7 +43,6 @@ func TestThatCreateEntityDoesNotAcceptUnknownBody(t *testing.T) {
 func TestThatCreateEntityStoresCorrectDevice(t *testing.T) {
 	is := is.New(t)
 
-	//db := &dbMock{}
 	deviceID := fiware.DeviceIDPrefix + "deviceID"
 	device := fiware.NewDevice(deviceID, "")
 	device.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(
@@ -54,7 +53,11 @@ func TestThatCreateEntityStoresCorrectDevice(t *testing.T) {
 	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(jsonBytes))
 	w := httptest.NewRecorder()
 
-	db := &database.DatastoreMock{}
+	db := &database.DatastoreMock{
+		CreateDeviceFunc: func(device *fiware.Device) (*models.Device, error) {
+			return &models.Device{}, nil
+		},
+	}
 
 	ctxreg := createContextRegistry(log.Logger, nil, db)
 	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
@@ -75,7 +78,11 @@ func TestThatCreateEntityStoresCorrectDeviceModel(t *testing.T) {
 	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(jsonBytes))
 	w := httptest.NewRecorder()
 
-	db := &database.DatastoreMock{}
+	db := &database.DatastoreMock{
+		CreateDeviceModelFunc: func(device *fiware.DeviceModel) (*models.DeviceModel, error) {
+			return &models.DeviceModel{}, nil
+		},
+	}
 	ctxreg := createContextRegistry(log.Logger, nil, db)
 	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
 
@@ -113,6 +120,9 @@ func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
 		GetDeviceFromIDFunc: func(string) (*models.Device, error) {
 			return &models.Device{Latitude: 64, Longitude: 17}, nil
 		},
+		UpdateDeviceValueFunc: func(deviceID string, value string) error {
+			return nil
+		},
 	}
 	m := messaging.ContextMock{}
 
@@ -133,6 +143,9 @@ func TestThatPatchAmbientTempDevicePublishesOnTheMessageQueue(t *testing.T) {
 	db := &database.DatastoreMock{
 		GetDeviceFromIDFunc: func(string) (*models.Device, error) {
 			return &models.Device{Latitude: 64, Longitude: 17}, nil
+		},
+		UpdateDeviceValueFunc: func(deviceID string, value string) error {
+			return nil
 		},
 	}
 	m := messaging.ContextMock{}
@@ -155,6 +168,9 @@ func TestThatPatchDeviceWithNoTempDoesNotPublishOnTheMessageQueue(t *testing.T) 
 		GetDeviceFromIDFunc: func(string) (*models.Device, error) {
 			return &models.Device{Latitude: 64, Longitude: 17}, nil
 		},
+		UpdateDeviceValueFunc: func(deviceID string, value string) error {
+			return nil
+		},
 	}
 	m := messaging.ContextMock{}
 
@@ -167,6 +183,38 @@ func TestThatPatchDeviceWithNoTempDoesNotPublishOnTheMessageQueue(t *testing.T) 
 	ngsi.NewUpdateEntityAttributesHandler(ctxreg).ServeHTTP(w, req)
 
 	is.Equal(len(m.SendCommandToCalls()), 0) // expected 0 commands to have been sent
+}
+
+func TestThatDeviceStateCanBeUpdated(t *testing.T) {
+	is := is.New(t)
+
+	db := &database.DatastoreMock{
+		GetDeviceFromIDFunc: func(string) (*models.Device, error) {
+			return &models.Device{Latitude: 64, Longitude: 17}, nil
+		},
+		UpdateDeviceStateFunc: func(deviceID, state string) error {
+			return nil
+		},
+		UpdateDeviceValueFunc: func(deviceID string, value string) error {
+			return nil
+		},
+	}
+	m := messaging.ContextMock{}
+
+	device := fiware.NewDevice("deviceId", "")
+	device.DeviceState = ngsitypes.NewTextProperty("on")
+
+	jsonBytes, _ := json.Marshal(device)
+
+	req, _ := http.NewRequest("PATCH", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:Device:se:deviceId/attrs/"), bytes.NewBuffer(jsonBytes))
+	w := httptest.NewRecorder()
+
+	ctxreg := createContextRegistry(log.Logger, &m, db)
+	ngsi.NewUpdateEntityAttributesHandler(ctxreg).ServeHTTP(w, req)
+
+	is.Equal(db.UpdateDeviceValueCalls()[0].Value, "")
+
+	is.Equal(len(db.UpdateDeviceStateCalls()), 1) // expected update device state to be called once
 }
 
 func TestRetrieveEntity(t *testing.T) {
