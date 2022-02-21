@@ -323,7 +323,11 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 	}
 
 	if updateSource.DeviceState != nil {
-		cs.db.UpdateDeviceState(shortEntityID, updateSource.DeviceState.Value)
+		sublogger.Info().Msgf("updating device state to %s", updateSource.DeviceState.Value)
+		err = cs.db.UpdateDeviceState(shortEntityID, updateSource.DeviceState.Value)
+		if err != nil {
+			sublogger.Error().Err(err).Msg("unable to update device with new state")
+		}
 	}
 
 	if updateSource.Location != nil {
