@@ -476,10 +476,15 @@ func (db *myDB) UpdateDeviceState(deviceID, state string) error {
 	if result.Error != nil {
 		return result.Error
 	} else if result.RowsAffected != 1 {
-		return errors.New("attempt to update non existing device")
+		return errors.New("could not find device to update")
 	}
 
-	db.impl.Model(&device).Updates(models.Device{DeviceState: state})
+	result = db.impl.Model(&device).Updates(models.Device{DeviceState: state})
+	if result.Error != nil {
+		return result.Error
+	} else if result.RowsAffected != 1 {
+		return errors.New("failed to update device state")
+	}
 
 	return nil
 }
