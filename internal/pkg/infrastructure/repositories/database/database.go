@@ -158,6 +158,7 @@ func NewDatabaseConnection(connect ConnectorFunc) (Datastore, error) {
 		"snowDepth":    "snow",
 		"temperature":  "t",
 		"co2":          "co2",
+		"volume":       "m3",
 	}
 
 	for property, abbreviation := range props {
