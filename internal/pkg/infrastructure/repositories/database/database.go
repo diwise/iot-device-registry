@@ -480,13 +480,7 @@ func (db *myDB) UpdateDeviceState(deviceID, state string) error {
 	}
 
 	result = db.impl.Model(&device).Updates(models.Device{DeviceState: state})
-	if result.Error != nil {
-		return result.Error
-	} else if result.RowsAffected != 1 {
-		return errors.New("failed to update device state")
-	}
-
-	return nil
+	return result.Error
 }
 
 func isStateValue(value string) bool {
