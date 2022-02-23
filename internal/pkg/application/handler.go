@@ -332,7 +332,20 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 	device, err := cs.db.GetDeviceFromID(shortEntityID)
 	if err != nil {
 		sublogger.Error().Err(err).Msg("unable to find device for attributes update")
-		return err
+		if !strings.HasPrefix(shortEntityID, "se:servanet:lora:msva:") {
+			return err
+		}
+
+		// TEMP: Add missing water meters here
+		waterMeter := fiware.NewDevice(entityID, "")
+		waterMeter.RefDeviceModel = ngsitypes.NewSingleObjectRelationship("urn:ngsi-ld:DeviceModel:io:diwise:watermetering")
+		device, err = cs.db.CreateDevice(waterMeter)
+		if err != nil {
+			sublogger.Error().Err(err).Msg("unable to automatically add watermeter to database")
+			return err
+		}
+
+		sublogger.Info().Msg("automatically added water meter to database")
 	}
 
 	if updateSource.DeviceState != nil {
