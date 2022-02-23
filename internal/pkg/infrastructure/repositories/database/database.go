@@ -30,6 +30,7 @@ type Datastore interface {
 	GetDeviceModelFromPrimaryKey(id uint) (*models.DeviceModel, error)
 	UpdateDeviceLocation(deviceID string, lat, lon float64) error
 	UpdateDeviceValue(deviceID, value string) error
+	UpdateDeviceState(deviceID, state string) error
 }
 
 var dbCtxKey = &databaseContextKey{"database"}
@@ -467,6 +468,19 @@ func (db *myDB) UpdateDeviceValue(deviceID, value string) error {
 	db.impl.Model(&models.Device{}).Where("id = ?", device.ID).Update("date_last_value_reported", timeNow)
 
 	return nil
+}
+
+func (db *myDB) UpdateDeviceState(deviceID, state string) error {
+	device := &models.Device{}
+	result := db.impl.Where("device_id = ?", deviceID).First(device)
+	if result.Error != nil {
+		return result.Error
+	} else if result.RowsAffected != 1 {
+		return errors.New("could not find device to update")
+	}
+
+	result = db.impl.Model(&device).Updates(models.Device{DeviceState: state})
+	return result.Error
 }
 
 func isStateValue(value string) bool {

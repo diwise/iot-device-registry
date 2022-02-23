@@ -9,9 +9,6 @@ services:
     depends_on:
       - rabbitmq
       - postgresdb
-    links:
-      - rabbitmq
-      - postgresdb
     environment:
       DIWISE_SQLDB_HOST: 'postgresdb'
       DIWISE_SQLDB_USER: 'testuser'

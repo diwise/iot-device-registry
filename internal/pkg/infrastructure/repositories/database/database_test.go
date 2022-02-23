@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/matryer/is"
 	"github.com/rs/zerolog/log"
 
 	"github.com/diwise/ngsi-ld-golang/pkg/datamodels/fiware"
@@ -215,6 +216,17 @@ func TestUpdateDeviceValue(t *testing.T) {
 	}
 }
 
+func TestUpdateDeviceState(t *testing.T) {
+	is := is.New(t)
+	if db, ok := newDatabaseForTest(t); ok {
+		if _, deviceID, ok := seedNewDevice(t, db); ok {
+
+			err := db.UpdateDeviceState(deviceID, "on")
+			is.NoErr(err) // Failed to update device state
+		}
+	}
+}
+
 func TestThatUpdateDeviceDoesNotSaveUnsupportedControlledProperty(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
 		if _, deviceID, ok := seedNewDevice(t, db); ok {
@@ -282,6 +294,9 @@ func seedNewDevice(t *testing.T, db Datastore) (uint, string, bool) {
 		d.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(
 			fiware.DeviceModelIDPrefix + modelID,
 		)
+
+		d.DeviceState = types.NewTextProperty("off")
+
 		device, err := db.CreateDevice(d)
 
 		if err != nil {

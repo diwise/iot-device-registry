@@ -43,6 +43,9 @@ var _ Datastore = &DatastoreMock{}
 // 			UpdateDeviceLocationFunc: func(deviceID string, lat float64, lon float64) error {
 // 				panic("mock out the UpdateDeviceLocation method")
 // 			},
+// 			UpdateDeviceStateFunc: func(deviceID string, state string) error {
+// 				panic("mock out the UpdateDeviceState method")
+// 			},
 // 			UpdateDeviceValueFunc: func(deviceID string, value string) error {
 // 				panic("mock out the UpdateDeviceValue method")
 // 			},
@@ -76,6 +79,9 @@ type DatastoreMock struct {
 
 	// UpdateDeviceLocationFunc mocks the UpdateDeviceLocation method.
 	UpdateDeviceLocationFunc func(deviceID string, lat float64, lon float64) error
+
+	// UpdateDeviceStateFunc mocks the UpdateDeviceState method.
+	UpdateDeviceStateFunc func(deviceID string, state string) error
 
 	// UpdateDeviceValueFunc mocks the UpdateDeviceValue method.
 	UpdateDeviceValueFunc func(deviceID string, value string) error
@@ -122,6 +128,13 @@ type DatastoreMock struct {
 			// Lon is the lon argument value.
 			Lon float64
 		}
+		// UpdateDeviceState holds details about calls to the UpdateDeviceState method.
+		UpdateDeviceState []struct {
+			// DeviceID is the deviceID argument value.
+			DeviceID string
+			// State is the state argument value.
+			State string
+		}
 		// UpdateDeviceValue holds details about calls to the UpdateDeviceValue method.
 		UpdateDeviceValue []struct {
 			// DeviceID is the deviceID argument value.
@@ -138,11 +151,15 @@ type DatastoreMock struct {
 	lockGetDeviceModels              sync.RWMutex
 	lockGetDevices                   sync.RWMutex
 	lockUpdateDeviceLocation         sync.RWMutex
+	lockUpdateDeviceState            sync.RWMutex
 	lockUpdateDeviceValue            sync.RWMutex
 }
 
 // CreateDevice calls CreateDeviceFunc.
 func (mock *DatastoreMock) CreateDevice(device *fiware.Device) (*models.Device, error) {
+	if mock.CreateDeviceFunc == nil {
+		panic("DatastoreMock.CreateDeviceFunc: method is nil but Datastore.CreateDevice was just called")
+	}
 	callInfo := struct {
 		Device *fiware.Device
 	}{
@@ -151,13 +168,6 @@ func (mock *DatastoreMock) CreateDevice(device *fiware.Device) (*models.Device, 
 	mock.lockCreateDevice.Lock()
 	mock.calls.CreateDevice = append(mock.calls.CreateDevice, callInfo)
 	mock.lockCreateDevice.Unlock()
-	if mock.CreateDeviceFunc == nil {
-		var (
-			deviceOut *models.Device
-			errOut    error
-		)
-		return deviceOut, errOut
-	}
 	return mock.CreateDeviceFunc(device)
 }
 
@@ -178,6 +188,9 @@ func (mock *DatastoreMock) CreateDeviceCalls() []struct {
 
 // CreateDeviceModel calls CreateDeviceModelFunc.
 func (mock *DatastoreMock) CreateDeviceModel(deviceModel *fiware.DeviceModel) (*models.DeviceModel, error) {
+	if mock.CreateDeviceModelFunc == nil {
+		panic("DatastoreMock.CreateDeviceModelFunc: method is nil but Datastore.CreateDeviceModel was just called")
+	}
 	callInfo := struct {
 		DeviceModel *fiware.DeviceModel
 	}{
@@ -186,13 +199,6 @@ func (mock *DatastoreMock) CreateDeviceModel(deviceModel *fiware.DeviceModel) (*
 	mock.lockCreateDeviceModel.Lock()
 	mock.calls.CreateDeviceModel = append(mock.calls.CreateDeviceModel, callInfo)
 	mock.lockCreateDeviceModel.Unlock()
-	if mock.CreateDeviceModelFunc == nil {
-		var (
-			deviceModelOut *models.DeviceModel
-			errOut         error
-		)
-		return deviceModelOut, errOut
-	}
 	return mock.CreateDeviceModelFunc(deviceModel)
 }
 
@@ -213,6 +219,9 @@ func (mock *DatastoreMock) CreateDeviceModelCalls() []struct {
 
 // GetDeviceFromID calls GetDeviceFromIDFunc.
 func (mock *DatastoreMock) GetDeviceFromID(id string) (*models.Device, error) {
+	if mock.GetDeviceFromIDFunc == nil {
+		panic("DatastoreMock.GetDeviceFromIDFunc: method is nil but Datastore.GetDeviceFromID was just called")
+	}
 	callInfo := struct {
 		ID string
 	}{
@@ -221,13 +230,6 @@ func (mock *DatastoreMock) GetDeviceFromID(id string) (*models.Device, error) {
 	mock.lockGetDeviceFromID.Lock()
 	mock.calls.GetDeviceFromID = append(mock.calls.GetDeviceFromID, callInfo)
 	mock.lockGetDeviceFromID.Unlock()
-	if mock.GetDeviceFromIDFunc == nil {
-		var (
-			deviceOut *models.Device
-			errOut    error
-		)
-		return deviceOut, errOut
-	}
 	return mock.GetDeviceFromIDFunc(id)
 }
 
@@ -248,6 +250,9 @@ func (mock *DatastoreMock) GetDeviceFromIDCalls() []struct {
 
 // GetDeviceModelFromID calls GetDeviceModelFromIDFunc.
 func (mock *DatastoreMock) GetDeviceModelFromID(id string) (*models.DeviceModel, error) {
+	if mock.GetDeviceModelFromIDFunc == nil {
+		panic("DatastoreMock.GetDeviceModelFromIDFunc: method is nil but Datastore.GetDeviceModelFromID was just called")
+	}
 	callInfo := struct {
 		ID string
 	}{
@@ -256,13 +261,6 @@ func (mock *DatastoreMock) GetDeviceModelFromID(id string) (*models.DeviceModel,
 	mock.lockGetDeviceModelFromID.Lock()
 	mock.calls.GetDeviceModelFromID = append(mock.calls.GetDeviceModelFromID, callInfo)
 	mock.lockGetDeviceModelFromID.Unlock()
-	if mock.GetDeviceModelFromIDFunc == nil {
-		var (
-			deviceModelOut *models.DeviceModel
-			errOut         error
-		)
-		return deviceModelOut, errOut
-	}
 	return mock.GetDeviceModelFromIDFunc(id)
 }
 
@@ -283,6 +281,9 @@ func (mock *DatastoreMock) GetDeviceModelFromIDCalls() []struct {
 
 // GetDeviceModelFromPrimaryKey calls GetDeviceModelFromPrimaryKeyFunc.
 func (mock *DatastoreMock) GetDeviceModelFromPrimaryKey(id uint) (*models.DeviceModel, error) {
+	if mock.GetDeviceModelFromPrimaryKeyFunc == nil {
+		panic("DatastoreMock.GetDeviceModelFromPrimaryKeyFunc: method is nil but Datastore.GetDeviceModelFromPrimaryKey was just called")
+	}
 	callInfo := struct {
 		ID uint
 	}{
@@ -291,13 +292,6 @@ func (mock *DatastoreMock) GetDeviceModelFromPrimaryKey(id uint) (*models.Device
 	mock.lockGetDeviceModelFromPrimaryKey.Lock()
 	mock.calls.GetDeviceModelFromPrimaryKey = append(mock.calls.GetDeviceModelFromPrimaryKey, callInfo)
 	mock.lockGetDeviceModelFromPrimaryKey.Unlock()
-	if mock.GetDeviceModelFromPrimaryKeyFunc == nil {
-		var (
-			deviceModelOut *models.DeviceModel
-			errOut         error
-		)
-		return deviceModelOut, errOut
-	}
 	return mock.GetDeviceModelFromPrimaryKeyFunc(id)
 }
 
@@ -318,18 +312,14 @@ func (mock *DatastoreMock) GetDeviceModelFromPrimaryKeyCalls() []struct {
 
 // GetDeviceModels calls GetDeviceModelsFunc.
 func (mock *DatastoreMock) GetDeviceModels() ([]models.DeviceModel, error) {
+	if mock.GetDeviceModelsFunc == nil {
+		panic("DatastoreMock.GetDeviceModelsFunc: method is nil but Datastore.GetDeviceModels was just called")
+	}
 	callInfo := struct {
 	}{}
 	mock.lockGetDeviceModels.Lock()
 	mock.calls.GetDeviceModels = append(mock.calls.GetDeviceModels, callInfo)
 	mock.lockGetDeviceModels.Unlock()
-	if mock.GetDeviceModelsFunc == nil {
-		var (
-			deviceModelsOut []models.DeviceModel
-			errOut          error
-		)
-		return deviceModelsOut, errOut
-	}
 	return mock.GetDeviceModelsFunc()
 }
 
@@ -348,18 +338,14 @@ func (mock *DatastoreMock) GetDeviceModelsCalls() []struct {
 
 // GetDevices calls GetDevicesFunc.
 func (mock *DatastoreMock) GetDevices() ([]models.Device, error) {
+	if mock.GetDevicesFunc == nil {
+		panic("DatastoreMock.GetDevicesFunc: method is nil but Datastore.GetDevices was just called")
+	}
 	callInfo := struct {
 	}{}
 	mock.lockGetDevices.Lock()
 	mock.calls.GetDevices = append(mock.calls.GetDevices, callInfo)
 	mock.lockGetDevices.Unlock()
-	if mock.GetDevicesFunc == nil {
-		var (
-			devicesOut []models.Device
-			errOut     error
-		)
-		return devicesOut, errOut
-	}
 	return mock.GetDevicesFunc()
 }
 
@@ -378,6 +364,9 @@ func (mock *DatastoreMock) GetDevicesCalls() []struct {
 
 // UpdateDeviceLocation calls UpdateDeviceLocationFunc.
 func (mock *DatastoreMock) UpdateDeviceLocation(deviceID string, lat float64, lon float64) error {
+	if mock.UpdateDeviceLocationFunc == nil {
+		panic("DatastoreMock.UpdateDeviceLocationFunc: method is nil but Datastore.UpdateDeviceLocation was just called")
+	}
 	callInfo := struct {
 		DeviceID string
 		Lat      float64
@@ -390,12 +379,6 @@ func (mock *DatastoreMock) UpdateDeviceLocation(deviceID string, lat float64, lo
 	mock.lockUpdateDeviceLocation.Lock()
 	mock.calls.UpdateDeviceLocation = append(mock.calls.UpdateDeviceLocation, callInfo)
 	mock.lockUpdateDeviceLocation.Unlock()
-	if mock.UpdateDeviceLocationFunc == nil {
-		var (
-			errOut error
-		)
-		return errOut
-	}
 	return mock.UpdateDeviceLocationFunc(deviceID, lat, lon)
 }
 
@@ -418,8 +401,46 @@ func (mock *DatastoreMock) UpdateDeviceLocationCalls() []struct {
 	return calls
 }
 
+// UpdateDeviceState calls UpdateDeviceStateFunc.
+func (mock *DatastoreMock) UpdateDeviceState(deviceID string, state string) error {
+	if mock.UpdateDeviceStateFunc == nil {
+		panic("DatastoreMock.UpdateDeviceStateFunc: method is nil but Datastore.UpdateDeviceState was just called")
+	}
+	callInfo := struct {
+		DeviceID string
+		State    string
+	}{
+		DeviceID: deviceID,
+		State:    state,
+	}
+	mock.lockUpdateDeviceState.Lock()
+	mock.calls.UpdateDeviceState = append(mock.calls.UpdateDeviceState, callInfo)
+	mock.lockUpdateDeviceState.Unlock()
+	return mock.UpdateDeviceStateFunc(deviceID, state)
+}
+
+// UpdateDeviceStateCalls gets all the calls that were made to UpdateDeviceState.
+// Check the length with:
+//     len(mockedDatastore.UpdateDeviceStateCalls())
+func (mock *DatastoreMock) UpdateDeviceStateCalls() []struct {
+	DeviceID string
+	State    string
+} {
+	var calls []struct {
+		DeviceID string
+		State    string
+	}
+	mock.lockUpdateDeviceState.RLock()
+	calls = mock.calls.UpdateDeviceState
+	mock.lockUpdateDeviceState.RUnlock()
+	return calls
+}
+
 // UpdateDeviceValue calls UpdateDeviceValueFunc.
 func (mock *DatastoreMock) UpdateDeviceValue(deviceID string, value string) error {
+	if mock.UpdateDeviceValueFunc == nil {
+		panic("DatastoreMock.UpdateDeviceValueFunc: method is nil but Datastore.UpdateDeviceValue was just called")
+	}
 	callInfo := struct {
 		DeviceID string
 		Value    string
@@ -430,12 +451,6 @@ func (mock *DatastoreMock) UpdateDeviceValue(deviceID string, value string) erro
 	mock.lockUpdateDeviceValue.Lock()
 	mock.calls.UpdateDeviceValue = append(mock.calls.UpdateDeviceValue, callInfo)
 	mock.lockUpdateDeviceValue.Unlock()
-	if mock.UpdateDeviceValueFunc == nil {
-		var (
-			errOut error
-		)
-		return errOut
-	}
 	return mock.UpdateDeviceValueFunc(deviceID, value)
 }
 

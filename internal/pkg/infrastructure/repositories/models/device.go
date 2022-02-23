@@ -16,6 +16,7 @@ type Device struct {
 	DeviceModelID         uint
 	DeviceModel           DeviceModel
 	DateLastValueReported time.Time
+	DeviceState           string
 }
 
 //DeviceModel is the database model to store Fiware Device Models in our database
