@@ -238,6 +238,42 @@ func TestRetrieveEntity(t *testing.T) {
 	is.Equal(w.Code, http.StatusOK) // request failed
 }
 
+func TestThatRetrieveEntityShowsDeviceState(t *testing.T) {
+	is := is.New(t)
+
+	db := &database.DatastoreMock{
+		GetDeviceModelFromPrimaryKeyFunc: func(uint) (*models.DeviceModel, error) {
+			return &models.DeviceModel{}, nil
+		},
+		GetDeviceFromIDFunc: func(string) (*models.Device, error) {
+			return &models.Device{
+				DeviceID:    "urn:ngsi-ld:Device:sk-elt-temp-02",
+				Value:       "t=12",
+				DeviceState: "on",
+			}, nil
+		},
+	}
+
+	req, _ := http.NewRequest("GET", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:Device:sk-elt-temp-02"), nil)
+	w := httptest.NewRecorder()
+
+	logger := log.Logger
+
+	ctxreg := createContextRegistry(logger, nil, db)
+
+	ngsi.NewRetrieveEntityHandler(ctxreg).ServeHTTP(w, req)
+
+	is.Equal(w.Code, http.StatusOK) // request failed
+
+	responseBytes, err := ioutil.ReadAll(w.Body)
+	is.NoErr(err) // failed to read response body
+
+	deviceStr, err := getDeviceAsString(responseBytes, logger)
+	is.NoErr(err) // failed to get device as string
+
+	is.Equal(deviceStr, deviceStateDevice) // retrieve entity returned a zero location
+}
+
 func TestThatRetrieveEntityDoesNotReturnZeroLocations(t *testing.T) {
 	is := is.New(t)
 
@@ -274,6 +310,8 @@ func TestThatRetrieveEntityDoesNotReturnZeroLocations(t *testing.T) {
 }
 
 const zeroLocationDevice string = `{"id":"urn:ngsi-ld:Device:sk-elt-temp-02","type":"Device","@context":["https://schema.lab.fiware.org/ld/context","https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld"],"value":{"type":"Property","value":"t%3D12"},"refDeviceModel":{"type":"Relationship","object":"urn:ngsi-ld:DeviceModel:"}}`
+
+const deviceStateDevice string = `{"id":"urn:ngsi-ld:Device:sk-elt-temp-02","type":"Device","@context":["https://schema.lab.fiware.org/ld/context","https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld"],"value":{"type":"Property","value":"t%3D12"},"refDeviceModel":{"type":"Relationship","object":"urn:ngsi-ld:DeviceModel:"},"deviceState":{"type":"Property","value":"on"}}`
 
 // write unit test for retrieve entity where device is nil.
 

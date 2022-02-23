@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/matryer/is"
 	"github.com/rs/zerolog/log"
 
 	"github.com/diwise/ngsi-ld-golang/pkg/datamodels/fiware"
@@ -216,20 +217,12 @@ func TestUpdateDeviceValue(t *testing.T) {
 }
 
 func TestUpdateDeviceState(t *testing.T) {
+	is := is.New(t)
 	if db, ok := newDatabaseForTest(t); ok {
 		if _, deviceID, ok := seedNewDevice(t, db); ok {
 
-			_ = db.UpdateDeviceState(deviceID, "on")
-			time.Sleep(10 * time.Millisecond)
-			_ = db.UpdateDeviceState(deviceID, "off")
-			time.Sleep(10 * time.Millisecond)
-			_ = db.UpdateDeviceState(deviceID, "on")
-			time.Sleep(10 * time.Millisecond)
-			err := db.UpdateDeviceState(deviceID, "off")
-
-			if err != nil {
-				t.Errorf("Failed to update device state: %s", err.Error())
-			}
+			err := db.UpdateDeviceState(deviceID, "on")
+			is.NoErr(err) // Failed to update device state
 		}
 	}
 }
@@ -301,6 +294,9 @@ func seedNewDevice(t *testing.T, db Datastore) (uint, string, bool) {
 		d.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(
 			fiware.DeviceModelIDPrefix + modelID,
 		)
+
+		d.DeviceState = types.NewTextProperty("off")
+
 		device, err := db.CreateDevice(d)
 
 		if err != nil {

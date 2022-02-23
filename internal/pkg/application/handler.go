@@ -214,6 +214,10 @@ func (cs *contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntiti
 					fiwareDevice.Location = geojson.CreateGeoJSONPropertyFromWGS84(device.Longitude, device.Latitude)
 				}
 
+				if device.DeviceState != "" {
+					fiwareDevice.DeviceState = ngsitypes.NewTextProperty(device.DeviceState)
+				}
+
 				err = callback(fiwareDevice)
 				if err != nil {
 					break
@@ -279,6 +283,10 @@ func (cs *contextSource) RetrieveEntity(entityID string, req ngsi.Request) (ngsi
 
 		if math.Abs(device.Latitude) > 0.1 || math.Abs(device.Longitude) > 0.1 {
 			fiwareDevice.Location = geojson.CreateGeoJSONPropertyFromWGS84(device.Longitude, device.Latitude)
+		}
+
+		if device.DeviceState != "" {
+			fiwareDevice.DeviceState = ngsitypes.NewTextProperty(device.DeviceState)
 		}
 
 		return fiwareDevice, nil
